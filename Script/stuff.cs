@@ -1,10 +1,18 @@
 using System.Collections;
+using System.Collections.Generic; // เพิ่มบรรทัดนี้เพื่อใช้ HashSet
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 
 public class stuff : MonoBehaviour
 {
+    [Header("Save Settings")]
+    public string objectID; // ตั้งชื่อตู้ให้ไม่ซ้ำกัน (เช่น Cab1, Cab2)
+
+    // 🔥 เปลี่ยนมาใช้ static HashSet เพื่อจำค่าเฉพาะตอนรันเกมรอบนั้นๆ
+    // พอหยุดเกมแล้วกด Play ใหม่ ตัวนี้จะถูกล้างค่าทิ้งเอง
+    private static HashSet<string> triggeredEvents = new HashSet<string>();
+
     [Header("UI Interact")]
     public TextMeshProUGUI GJ;
     public GameObject GJ1;
@@ -18,9 +26,8 @@ public class stuff : MonoBehaviour
     public float ghostSpawnDistance = 4f;  
 
     [Header("Jump Scare Settings")]
-        public bool useJumpScare = false;   // ติ๊กเพื่อให้ทำ Jump Scare
-        public JumpScare jumpScare;         // ลากสคริปต์ JumpScare มาวาง
-
+    public bool useJumpScare = false;   
+    public JumpScare jumpScare;         
 
     void Start()
     {
@@ -28,25 +35,33 @@ public class stuff : MonoBehaviour
         if (GJ1 != null) GJ1.gameObject.SetActive(false);
         
         pickUpAllowed = false;
+
+        // ✅ เช็คจากตัวแปร static ว่ารอบการเล่นนี้ ตู้นี้เคยทำงานไปหรือยัง
+        if (!string.IsNullOrEmpty(objectID) && triggeredEvents.Contains(objectID))
+        {
+            ghostSpawned = true; // ถ้าเคยทำไปแล้ว ให้ถือว่า Spawn แล้ว (จะไม่ทำซ้ำ)
+        }
     }
 
     void Update()
     {
         if(pickUpAllowed && Input.GetKeyDown(KeyCode.E))
         {
-            // --- ส่วนที่ตัดออก: ไม่ควรไปยุ่งกับ interactionRange ของผู้เล่นตรงนี้ ---
-            // Player.Instance.interactionRange = 6.0f; 
-            // -----------------------------------------------------------
-
-            // ถ้าเป็นตู้ Jump Scare
+            // ถ้าเป็นตู้ Jump Scare และยังไม่เคยทำงาน
             if (useJumpScare && !ghostSpawned)
             {
                 ghostSpawned = true;
 
+                // ✅ บันทึกชื่อตู้นี้ลงในรายการที่ "ทำไปแล้ว"
+                if (!string.IsNullOrEmpty(objectID))
+                {
+                    triggeredEvents.Add(objectID);
+                }
+
                 // เรียกจั้มฟ์สแก
                 if (jumpScare != null)
                 {
-                    jumpScare.Play();   // <-- เรียกตรงนี้
+                    jumpScare.Play();   
                 }
 
                 return;
@@ -66,9 +81,6 @@ public class stuff : MonoBehaviour
             if (GJ != null) GJ.gameObject.SetActive(isActive1);
             if (GJ1 != null) GJ1.SetActive(isActive);
 
-            // หมายเหตุ: การใช้ Time.timeScale = 0 จะทำให้เกมหยุด "ทุกอย่าง" รวมทั้งผีด้วย
-            // ถ้าตั้งใจให้เป็นตู้ซ่อนตัว (Hide) ไม่ควรหยุดเวลาครับ
-            // แต่ถ้าตั้งใจให้เป็นหน้าอ่านกระดาษ (Read Note) การหยุดเวลาถือว่าถูกต้องครับ
             if (isActive)
             {
                 if (Player.Instance != null) Player.Instance.interactionRange = 10.0f;
@@ -80,38 +92,20 @@ public class stuff : MonoBehaviour
                 Time.timeScale = 1f;
             }
         }
-        
-        // --- ส่วนที่ตัดออก: ลบ else ที่ไปลดระยะแขนผู้เล่นทิ้ง ---
-        /* else
-        {
-            Player.Instance.interactionRange = 1.0f; 
-        }
-        */
-        // ---------------------------------------------------
-        
     }
     
     private void SpawnGhost()
     {
-        // ✅ แก้ไข: ใช้ Player.Instance เช็คได้เลย ไม่ต้อง Find ให้หนักเครื่อง
         if (Player.Instance == null || ghostPrefab == null) return;
 
         Vector3 centerPoint = transform.position;
-        
-        // สุ่มมุม 0-360 องศา
         float randomAngle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-        
-        // คำนวณทิศทางสุ่ม
         Vector3 randomDir = new Vector3(Mathf.Cos(randomAngle), Mathf.Sin(randomAngle), 0f);
-        
-        // คำนวณตำแหน่งเกิด
         Vector3 spawnPos = centerPoint + randomDir.normalized * ghostSpawnDistance;
         spawnPos.z = 0f;
 
-        // สร้างผี
         GameObject newGhost = Instantiate(ghostPrefab, spawnPos, Quaternion.identity);
         
-        // ✅ แก้ไข: ส่ง transform ของ Player.Instance ไปให้ผี
         GhostAI ghostAI = newGhost.GetComponent<GhostAI>();
         if (ghostAI != null)
         {
@@ -123,7 +117,6 @@ public class stuff : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        // ใช้ CompareTag ประหยัดกว่า ==
         if(collision.CompareTag("Player"))
         {
             if (GJ != null) GJ.gameObject.SetActive(true);

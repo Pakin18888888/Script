@@ -5,38 +5,57 @@ public class Inventory : MonoBehaviour
 {
     public static Inventory Instance;
 
-    // เปลี่ยนจาก object เป็น List<string> เพื่อเก็บ ID กุญแจ
-    public List<string> keyIDs = new List<string>(); 
+    [System.Serializable]
+    public class Item
+    {
+        public string id;
+        public Sprite icon;
+        public int amount = 1;
+    }
 
-    public List<string> items = new List<string>();
+    public List<Item> items = new List<Item>();
 
     void Awake()
     {
-       // บรรทัดนี้สำคัญมาก! ถ้าไม่มีบรรทัดนี้ คนอื่นจะหา Inventory ไม่เจอ
-    if (Instance == null)
-    {
-        Instance = this;
-        DontDestroyOnLoad(gameObject); // (ใส่หรือไม่ใส่ก็ได้ ถ้าแปะที่ Player ที่มี DontDestroy อยู่แล้ว)
-    }
-    else
-    {
-        Destroy(gameObject);
-    }
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else Destroy(gameObject);
     }
 
-    // ฟังก์ชันสำหรับเพิ่มกุญแจเข้าตัว
-    public void AddKey(string keyID)
+    // เพิ่มไอเท็มแบบทั่วไป
+    public void AddItem(string id, Sprite icon, int amount = 1)
     {
-        if (!keyIDs.Contains(keyID))
+        Item existing = items.Find(i => i.id == id);
+
+        if (existing != null)
         {
-            keyIDs.Add(keyID);
-            Debug.Log($"ได้รับกุญแจ: {keyID} แล้ว!");
+            existing.amount += amount;
+        }
+        else
+        {
+            Item newItem = new Item();
+            newItem.id = id;
+            newItem.icon = icon;
+            newItem.amount = amount;
+            items.Add(newItem);
         }
     }
 
-    // (Option) สำหรับระบบ Save/Load
-    public void LoadFromIdList(List<string> savedKeys)
+    public bool HasItem(string id)
     {
-        keyIDs = new List<string>(savedKeys);
+        return items.Exists(i => i.id == id);
+    }
+
+    public void RemoveItem(string id, int amount = 1)
+    {
+        Item existing = items.Find(i => i.id == id);
+        if (existing == null) return;
+
+        existing.amount -= amount;
+        if (existing.amount <= 0)
+            items.Remove(existing);
     }
 }

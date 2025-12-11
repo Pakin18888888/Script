@@ -1,28 +1,40 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class SanityPotion : MonoBehaviour , IInteractable
+public class SanityPotion : MonoBehaviour, IInteractable
 {
     [Header("Sanity Heal")]
-    public float healAmount = 5f;   // ✅ ปรับได้ใน Inspector
+    public float healAmount = 5f;
 
     [Header("Pickup Settings")]
     public bool destroyOnUse = true;
+    public Sprite icon;
+
+    [Header("Sound")]
+    public AudioClip pickUpSound;
+    public AudioSource audioSource;
 
     public void OnInteract()
+{
+    if (sanitySystem.Instance != null)
+        sanitySystem.Instance.TakeSanityDamage(-healAmount);
+
+    PlayPickupSoundDetached();
+
+    if (destroyOnUse)
+        Destroy(gameObject);
+}
+
+void PlayPickupSoundDetached()
+{
+    if (pickUpSound == null) return;
+    AudioSource.PlayClipAtPoint(pickUpSound, transform.position, 1f);
+}
+
+
+    void PlayPickupSound()
     {
-        Debug.Log("ใช้ยาเพิ่มสติ!");
-
-        // ✅ เพิ่มค่า Sanity
-        if (sanitySystem.Instance != null)
-        {
-            sanitySystem.Instance.TakeSanityDamage(-healAmount); // ลบด้วยค่าลบ = ฟื้น
-        }
-
-        // ✅ ทำลาย item
-        if (destroyOnUse)
-            Destroy(gameObject);
+        if (audioSource != null && pickUpSound != null)
+            audioSource.PlayOneShot(pickUpSound);
     }
 
     public string GetDescription()

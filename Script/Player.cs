@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.Rendering.Universal;
 
 public class Player : MonoBehaviour
@@ -9,6 +10,9 @@ public class Player : MonoBehaviour
     [Header("ตั้งค่าการเคลื่อนที่")]
     public float moveSpeed = 5f;
     public bool canMove = true;
+
+    [Header("Footstep Sound")]
+    public AudioSource footstepSource;
     
     [Header("ตั้งค่าสถานะตัวละคร")]
     public int hp = 100;
@@ -54,11 +58,20 @@ public class Player : MonoBehaviour
 
     void Start()
     {
-        // ถ้ายังไม่ได้ลาก Inventory มาใส่ ให้ลองหาเองจากในฉาก
-        if (inventory == null)
-        {
-            inventory = FindObjectOfType<Inventory>();
-        }
+        // ซีนที่ไม่ต้องให้ Player อยู่
+    string[] noPlayerScenes = {"CutEndScene" };
+
+    string currentScene = SceneManager.GetActiveScene().name;
+
+    if (System.Array.Exists(noPlayerScenes, scene => scene == currentScene))
+    {
+        Destroy(gameObject);
+        return;
+    }
+
+    // หาของในฉาก
+    if (inventory == null)
+        inventory = FindObjectOfType<Inventory>();
     }
 
     void Update()
@@ -121,6 +134,20 @@ public class Player : MonoBehaviour
                 animator.SetFloat("InputY", moveInput.y);
                 animator.SetFloat("LastInputX", moveInput.x);
                 animator.SetFloat("LastInputY", moveInput.y);
+            }
+        }
+        // 🔊 ระบบเสียงเท้า
+        if (footstepSource != null)
+        {
+            if (isMoving && canMove)
+            {
+                if (!footstepSource.isPlaying)
+                    footstepSource.Play();
+            }
+            else
+            {
+                if (footstepSource.isPlaying)
+                    footstepSource.Stop();
             }
         }
     }

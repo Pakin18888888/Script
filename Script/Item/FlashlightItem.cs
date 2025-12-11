@@ -1,37 +1,57 @@
 using UnityEngine;
 
-// ต้องใส่ IInteractable ต่อท้าย เพื่อให้คลิกเมาส์แล้ว Player มองเห็น
-public class FlashlightItem : MonoBehaviour, IInteractable 
+public class FlashlightItem : MonoBehaviour, IInteractable
 {
-    public string itemID = "Flashlight";
+    public string itemID = "flashlight";
+    public Sprite icon;
 
-    // ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อผู้เล่นเอาเมาส์ไปคลิกที่ไฟฉาย
-    public void OnInteract()
+    [Header("Sound")]
+    public AudioClip pickUpSound;
+    public AudioSource audioSource;
+    public static bool flashlightCollected = false;
+
+    void Start()
     {
-        Debug.Log("คลิกเก็บไฟฉายแล้ว!");
-
-        // 1. เพิ่มชื่อลงกระเป๋า (เพื่อให้รู้ว่าเคยเก็บแล้ว)
-        if (Inventory.Instance != null)
+        if (Inventory.Instance != null &&
+            Inventory.Instance.HasItem(itemID))
         {
-            if (!Inventory.Instance.items.Contains(itemID))
-            {
-                Inventory.Instance.items.Add(itemID);
-            }
+            Destroy(gameObject);
         }
-
-        // 2. สั่งให้ Player เปิดไฟ/ขยายไฟ
-        if (Player.Instance != null)
-        {
-            Player.Instance.EnableFlashlight(); 
-        }
-
-        // 3. หายตัวไป
-        Destroy(gameObject);
     }
-    
-    // (Option) เผื่อในอนาคตทำ UI ขึ้นชื่อของ
+
+    public void OnInteract()
+{
+    flashlightCollected = true;
+
+    Inventory.Instance.AddItem(itemID, icon, 1);
+
+    if (Player.Instance != null)
+        Player.Instance.EnableFlashlight();
+
+    if (TutorialUI.Instance != null)
+        TutorialUI.Instance.DestroyTutorialUI();  // ลบ UI บทสอน
+
+    PlayPickupSoundDetached();
+
+    Destroy(gameObject);
+}
+
+
+void PlayPickupSoundDetached()
+{
+    if (pickUpSound == null) return;
+    AudioSource.PlayClipAtPoint(pickUpSound, transform.position, 1f);
+}
+
+    void PlayPickupSound()
+    {
+        if (audioSource != null && pickUpSound != null)
+            audioSource.PlayOneShot(pickUpSound);
+    }
+
     public string GetDescription()
     {
         return "เก็บไฟฉาย";
     }
+    
 }
